@@ -1,0 +1,18 @@
+[package]
+name = "cli-test-executor"
+version = "0.1.0"
+authors = ["Alen Šiljak <dev@alensiljak.eu.org>"]
+description="A tool for running the CLI tests inspired by ctest, lit, shelltestrunner"
+edition = "2021"
+repository="https://github.com/alensiljak/cli-test-executor"
+keywords=["cli", "testing"]
+categories = ["command-line-utilities", "development-tools", "development-tools::testing"]
+license = "GPL-3.0-or-later"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "cte"
+path = "src/main.rs"
+
+[dependencies]
