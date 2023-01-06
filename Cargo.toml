@@ -16,3 +16,8 @@ name = "cte"
 path = "src/main.rs"
 
 [dependencies]
+anyhow = "1.0.68"
+cli_runner = "0.2.1"
+env_logger = "0.10.0"
+glob = "0.3.1"
+log = "0.4.17"
