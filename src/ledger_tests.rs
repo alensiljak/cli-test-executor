@@ -127,6 +127,9 @@ fn extract_command(line: &str) -> &str {
 
 /// Execute the command and get the output.
 fn run_command(test_command: &str) -> Vec<String> {
+    // todo: read stdin, or
+    // read the test file as input.
+    
     let mut command = "ledger ".to_string();
     command.push_str(&test_command);
 
