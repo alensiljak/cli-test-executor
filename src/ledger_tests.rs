@@ -37,14 +37,15 @@ pub(crate) fn parse_test_file(path: PathBuf) -> anyhow::Result<TestFile> {
     for line_res in reader.lines() {
         // parse
         let line = line_res?;
+        log::debug!("line: {:?}", line);
+
         //match line
         if line.starts_with(';') {
             // comment, ignore
+            log::debug!("ignoring");
             continue;
         } else if line.starts_with("test") {
-            // parse test line
-            // start the new Test section in the output.
-            current_test_section += 1;
+            // test line
             result.tests.push(TestDef::default());
             
             // extract the command.
@@ -53,27 +54,44 @@ pub(crate) fn parse_test_file(path: PathBuf) -> anyhow::Result<TestFile> {
             // The input section is complete, start the output section.
             current_section = TestFileSections::Output;
 
+            log::debug!("got command {:?}", &line);
             continue;
         } else if line.eq("end test") {
-            todo!("end of the test section");
+            // end of the test section
             // complete the current section.
+            // start the new Test section in the output.
+            current_test_section += 1;
+            current_section = TestFileSections::Unknown;
         } else {
-            // todo!("read into the current section");
+            // read into the current section
             match current_section {
                 TestFileSections::Input => {
-                    todo!("Add to input section");
+                    // Add to input section
+                    log::debug!("adding to input.");
+
+                    result.input += &line;
                 }
                 TestFileSections::Output => {
-                    todo!("Add to output section")
+                    // Add to output section
+                    log::debug!("adding to output.");
+
+                    result.tests[current_test_section].ouput += &line;
+                }
+                TestFileSections::Unknown => {
+                    // Ignore anything until the next test section.
+                    log::debug!("ignoring");
+                    continue;
                 }
                 _ => {
                     // ignore
+                    log::debug!("skipping");
+                    continue;
                 }
             }
         }
     }
 
-    todo!("complete");
+    Ok(result)
 }
 
 /// Extract ledger command from the `test` line in the file.
@@ -86,7 +104,7 @@ fn extract_command(line: &str) -> &str {
 mod tests {
     use std::{path::PathBuf, str::FromStr};
 
-    use anyhow::Ok;
+    use crate::TestFile;
 
     use super::{parse_test_file, extract_command};
 
@@ -106,11 +124,18 @@ mod tests {
         let path = "tests/cmd-accounts.test";
         let pathbuf = PathBuf::from_str(path)?;
 
-        let actual = parse_test_file(pathbuf)?;
+        let actual: TestFile;
+        let result = parse_test_file(pathbuf);
+        match result {
+            Ok(value) => actual = value,
+            Err(e) => panic!("Error: {:?}", e)
+        }
 
         log::debug!("actual: {:?}", actual);
-        
-        assert_eq!(1, actual.tests.len());
+
+        assert_eq!(4, actual.tests.len());
+        assert_eq!("accounts b", actual.tests[2].command);
+        assert_eq!("Assets:Testing123ÕßDone", actual.tests[3].ouput);
 
         Ok(())
     }

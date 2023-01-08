@@ -53,7 +53,9 @@ struct TestDef {
     pub ouput: String
 }
 
+#[allow(unused)]
 enum TestFileSections {
+    Unknown,
     Comment,
     Input,
     Command,
@@ -68,5 +70,8 @@ fn run_test_file(path: PathBuf) {
     // todo: currently recognising only ledger test files. Add other types.
 
     // load and parse the test file.
-    ledger_tests::parse_test_file(path);
+    match ledger_tests::parse_test_file(path) {
+        Ok(_) => todo!(),
+        Err(e) => log::error!("error parsing file: {:?}", e),
+    }
 }
