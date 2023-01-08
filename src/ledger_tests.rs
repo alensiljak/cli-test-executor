@@ -23,7 +23,7 @@ use std::{
     path::PathBuf,
 };
 
-use crate::{TestFile, TestFileSections, TestDef};
+use crate::{TestDef, TestFile, TestFileSections};
 
 /// Parses the test text file.
 pub(crate) fn parse_test_file(path: PathBuf) -> anyhow::Result<TestFile> {
@@ -47,10 +47,10 @@ pub(crate) fn parse_test_file(path: PathBuf) -> anyhow::Result<TestFile> {
         } else if line.starts_with("test") {
             // test line
             result.tests.push(TestDef::default());
-            
+
             // extract the command.
             result.tests[current_test_section].command = extract_command(&line).to_owned();
-            
+
             // The input section is complete, start the output section.
             current_section = TestFileSections::Output;
 
@@ -69,29 +69,54 @@ pub(crate) fn parse_test_file(path: PathBuf) -> anyhow::Result<TestFile> {
                     // Add to input section
                     log::debug!("adding to input.");
 
-                    result.input += &line;
+                    result.input.push(line);
                 }
                 TestFileSections::Output => {
                     // Add to output section
                     log::debug!("adding to output.");
 
-                    result.tests[current_test_section].ouput += &line;
+                    result.tests[current_test_section].ouput.push(line);
                 }
                 TestFileSections::Unknown => {
                     // Ignore anything until the next test section.
                     log::debug!("ignoring");
-                    continue;
                 }
                 _ => {
                     // ignore
                     log::debug!("skipping");
-                    continue;
                 }
             }
+            continue;
         }
     }
 
     Ok(result)
+}
+
+/// Run the tests in the parsed structure.
+pub(crate) fn run_tests(test_file: TestFile) {
+    for (index, test) in test_file.tests.iter().enumerate() {
+        log::debug!("Test {} results:", index);
+
+        let expected = test
+            .ouput
+            .iter()
+            .map(|line| line.as_str())
+            .collect::<Vec<&str>>();
+
+        let output = run_command(&test.command);
+        let actual: Vec<&str> = output.iter().map(|line| line.as_str()).collect();
+
+        // let diff = difflib::unified_diff(&expected, &actual, "Expected", "Actual", "", "", 3);
+        let diff = difflib::context_diff(&expected, &actual, "Expected", "Actual", "", "", 3);
+
+        if !diff.is_empty() {
+            diff.iter().for_each(|line| println!("{}", line));
+
+            log::debug!("actual: {:?}", &actual);
+            log::debug!("expected: {:?}", &expected);
+        }
+    }
 }
 
 /// Extract ledger command from the `test` line in the file.
@@ -100,13 +125,39 @@ fn extract_command(line: &str) -> &str {
     &line[5..].trim()
 }
 
+/// Execute the command and get the output.
+fn run_command(test_command: &str) -> Vec<String> {
+    let mut command = "ledger ".to_string();
+    command.push_str(&test_command);
+
+    log::debug!("running {:?}", &command);
+
+    // run the command
+    let output = cli_runner::run(&command);
+
+    let error = cli_runner::get_stderr(&output);
+    log::debug!("Error: {:?}", error);
+    assert!(output.stderr.is_empty());
+
+    // collect the output
+    let actual = cli_runner::get_stdout(&output)
+        .lines()
+        // .collect::<Vec<&str>>();
+        .map(|line| line.to_owned())
+        .collect();
+
+    actual
+}
+
+// Tests
+
 #[cfg(test)]
 mod tests {
     use std::{path::PathBuf, str::FromStr};
 
     use crate::TestFile;
 
-    use super::{parse_test_file, extract_command};
+    use super::{extract_command, parse_test_file};
 
     #[test]
     fn test_command_extraction() {
@@ -128,15 +179,34 @@ mod tests {
         let result = parse_test_file(pathbuf);
         match result {
             Ok(value) => actual = value,
-            Err(e) => panic!("Error: {:?}", e)
+            Err(e) => panic!("Error: {:?}", e),
         }
 
         log::debug!("actual: {:?}", actual);
 
         assert_eq!(4, actual.tests.len());
         assert_eq!("accounts b", actual.tests[2].command);
-        assert_eq!("Assets:Testing123ÕßDone", actual.tests[3].ouput);
+        assert_eq!("Assets:Testing123ÕßDone", actual.tests[3].ouput[0]);
 
         Ok(())
+    }
+
+    #[test_log::test]
+    fn test_running_cli() {
+        let command = "ledger accounts";
+
+        // run the command
+        let output = cli_runner::run(&command);
+
+        let error = cli_runner::get_stderr(&output);
+        log::debug!("Error: {:?}", error);
+        assert!(output.stderr.is_empty());
+
+        // collect the output
+        let actual = cli_runner::get_stdout(&output)
+            .lines()
+            .collect::<Vec<&str>>();
+
+        assert!(!actual.is_empty());
     }
 }

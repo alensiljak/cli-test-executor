@@ -36,7 +36,7 @@ pub fn run() -> anyhow::Result<()> {
 /// A test file can have multiple tests defined.
 #[derive(Debug, Default)]
 struct TestFile {
-    pub input: String,
+    pub input: Vec<String>,
     pub tests: Vec<TestDef>
 }
 
@@ -50,7 +50,7 @@ impl TestFile {
 #[derive(Debug, Default)]
 struct TestDef {
     pub command: String,
-    pub ouput: String
+    pub ouput: Vec<String>
 }
 
 #[allow(unused)]
@@ -64,14 +64,17 @@ enum TestFileSections {
 
 /// Runs individual test files
 fn run_test_file(path: PathBuf) {
-    log::debug!("found test: {}", path.as_path().to_str().unwrap());
-    log::debug!("running test {}", path.as_os_str().to_str().unwrap());
+    log::debug!("found test file: {}", path.as_path().to_str().unwrap());
+    // log::debug!("running test {}", path.as_os_str().to_str().unwrap());
 
     // todo: currently recognising only ledger test files. Add other types.
 
     // load and parse the test file.
-    match ledger_tests::parse_test_file(path) {
-        Ok(_) => todo!(),
-        Err(e) => log::error!("error parsing file: {:?}", e),
-    }
+    let test_file = match ledger_tests::parse_test_file(path) {
+        Ok(parsed) => parsed,
+        Err(e) => panic!("error parsing file: {:?}", e),
+    };
+
+    // run tests
+    ledger_tests::run_tests(test_file);
 }
