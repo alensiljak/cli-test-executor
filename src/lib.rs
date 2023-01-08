@@ -34,12 +34,20 @@ pub fn run() -> anyhow::Result<()> {
 /// test <command>
 /// <output>
 /// A test file can have multiple tests defined.
+#[derive(Debug, Default)]
 struct TestFile {
     pub input: String,
     pub tests: Vec<TestDef>
 }
 
+impl TestFile {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// Each test consists of a command and an expected output.
+#[derive(Debug, Default)]
 struct TestDef {
     pub command: String,
     pub ouput: String

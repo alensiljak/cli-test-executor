@@ -21,3 +21,6 @@ cli_runner = "0.2.1"
 env_logger = "0.10.0"
 glob = "0.3.1"
 log = "0.4.17"
+
+[dev-dependencies]
+test-log = "0.2.11"
