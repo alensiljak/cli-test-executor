@@ -29,7 +29,11 @@ use crate::{TestDef, TestFile, TestFileSections};
 /// Parses the test text file.
 pub(crate) fn parse_test_file(path: PathBuf) -> anyhow::Result<TestFile> {
     let mut result = TestFile::new();
-    result.path = path.to_str().unwrap().to_owned();
+
+    // path
+    result.path = path.as_os_str().to_str().unwrap().to_owned();
+    log::debug!("using test path: {}", result.path);
+
     // read line by line
     let f = File::open(path)?;
     let reader = BufReader::new(f);
@@ -73,16 +77,19 @@ pub(crate) fn parse_test_file(path: PathBuf) -> anyhow::Result<TestFile> {
 
                     result.input.push(line);
                 }
+
                 TestFileSections::Output => {
                     // Add to output section
                     log::debug!("adding to output.");
 
                     result.tests[current_test_section].ouput.push(line);
                 }
+
                 TestFileSections::Unknown => {
                     // Ignore anything until the next test section.
                     log::debug!("ignoring");
                 }
+
                 _ => {
                     // ignore
                     log::debug!("skipping");
@@ -133,12 +140,15 @@ fn run_command(test_command: &str, test_path: &str) -> Vec<String> {
     // read the test file as input.
 
     let mut command = "ledger ".to_string();
+
     // input
     if !&test_command.contains(" -f ") {
         // use the existing file as input
-        command.push_str(" -f ");
+        command.push_str("-f ");
         command.push_str(test_path);
         command.push_str(" ");
+
+        log::debug!("appended -f: {:?}", &command);
     }
 
     command.push_str(&test_command);

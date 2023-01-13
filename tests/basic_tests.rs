@@ -10,7 +10,7 @@ fn basic_test() {
     // env!("CARGO_PKG_NAME")
     let output = Command::cargo_bin("cte")
         .unwrap()
-        .arg("tests/cmd-accounts.test")
+        // .arg("tests/cmd-accounts.test")
         .output()
         .unwrap();
 
