@@ -15,6 +15,7 @@ test <cli command>
 
 Some rules:
 - the ledger command does not include "ledger" (the app name)
+- if no input specified with "-f", the existing test file is used as input.
  */
 
 use std::{
@@ -28,6 +29,7 @@ use crate::{TestDef, TestFile, TestFileSections};
 /// Parses the test text file.
 pub(crate) fn parse_test_file(path: PathBuf) -> anyhow::Result<TestFile> {
     let mut result = TestFile::new();
+    result.path = path.to_str().unwrap().to_owned();
     // read line by line
     let f = File::open(path)?;
     let reader = BufReader::new(f);
@@ -104,7 +106,7 @@ pub(crate) fn run_tests(test_file: TestFile) {
             .map(|line| line.as_str())
             .collect::<Vec<&str>>();
 
-        let output = run_command(&test.command);
+        let output = run_command(&test.command, &test_file.path);
         let actual: Vec<&str> = output.iter().map(|line| line.as_str()).collect();
 
         // let diff = difflib::unified_diff(&expected, &actual, "Expected", "Actual", "", "", 3);
@@ -126,11 +128,19 @@ fn extract_command(line: &str) -> &str {
 }
 
 /// Execute the command and get the output.
-fn run_command(test_command: &str) -> Vec<String> {
+fn run_command(test_command: &str, test_path: &str) -> Vec<String> {
     // todo: read stdin, or
     // read the test file as input.
-    
+
     let mut command = "ledger ".to_string();
+    // input
+    if !&test_command.contains(" -f ") {
+        // use the existing file as input
+        command.push_str(" -f ");
+        command.push_str(test_path);
+        command.push_str(" ");
+    }
+
     command.push_str(&test_command);
 
     log::debug!("running {:?}", &command);
@@ -196,7 +206,7 @@ mod tests {
 
     #[test_log::test]
     fn test_running_cli() {
-        let command = "ledger accounts";
+        let command = "ledger -f tests/cmd-accounts.test accounts";
 
         // run the command
         let output = cli_runner::run(&command);
@@ -210,6 +220,8 @@ mod tests {
             .lines()
             .collect::<Vec<&str>>();
 
+        log::debug!("actual: {:?}", actual);
         assert!(!actual.is_empty());
+        assert_eq!(6, actual.len());  // 6 accounts returned
     }
 }

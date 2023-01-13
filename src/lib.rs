@@ -36,6 +36,7 @@ pub fn run() -> anyhow::Result<()> {
 /// A test file can have multiple tests defined.
 #[derive(Debug, Default)]
 struct TestFile {
+    pub path: String,
     pub input: Vec<String>,
     pub tests: Vec<TestDef>
 }
